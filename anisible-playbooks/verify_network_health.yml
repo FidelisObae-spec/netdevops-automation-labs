@@ -1,0 +1,35 @@
+---
+- name: Automated Network Health Check and Telemetry Collection
+  hosts: edge_routers
+  gather_facts: false
+  tasks:
+
+    - name: Gather Running System Information (Facts)
+      cisco.ios.ios_facts:
+        gather_subset:
+          - min
+          - interfaces
+      register: router_facts
+
+    - name: Verify Interface Operational Status
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show version | include uptime
+      register: network_telemetry
+
+    - name: Generate Clean Health Report Log
+      copy:
+        content: |
+          =========================================
+          NETDEVOPS AUTOMATED NETWORK HEALTH REPORT
+          =========================================
+          Device Hostname: {{ inventory_hostname }}
+          OS Version: {{ router_facts.ansible_facts.ansible_net_version }}
+          
+          [Telemetry Data Stream]
+          {{ network_telemetry.stdout[0] }}
+          
+          [System Uptime]
+          {{ network_telemetry.stdout[1] }}
+        dest: "./documentation/reports/health_check_{{ inventory_hostname }}.txt"
