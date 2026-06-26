@@ -1,1 +1,27 @@
+---
+- name: Automate Core Network Switches Configuration
+  hosts: core_switches
+  gather_facts: false
+  tasks:
 
+    - name: Ensure Corporate VLAN 10 is Configured
+      cisco.ios.ios_vlans:
+        config:
+          - id: 10
+            name: Engineering_Dept
+        state: merged
+
+    - name: Ensure Guest Network VLAN 20 is Configured
+      cisco.ios.ios_vlans:
+        config:
+          - id: 20
+            name: Guest_WiFi
+        state: merged
+
+    - name: Deploy Secure Interface Baseline
+      cisco.ios.ios_interfaces:
+        config:
+          - name: GigabitEthernet0/1
+            description: "Uplink to Core Firewall - Automated via Git"
+            enabled: true
+        state: merged
