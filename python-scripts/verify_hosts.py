@@ -34,7 +34,7 @@ def main():
     report = {"online": [], "offline": []}
     
     for hostname, ip in network_inventory.items():
-        print(Checking {hostname} [{ip}]...)
+        print(f"Checking {hostname} [{ip}]...")
         is_online = check_device_status(ip)
         
         if is_online:
