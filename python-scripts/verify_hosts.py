@@ -1,54 +1,80 @@
-import subprocess
-import json
+import os
+import re
+
+def load_network_inventory(file_path):
+    """
+    Parses the inventory.yaml file dynamically without external dependencies.
+    Returns a dictionary mapping hostnames to IP addresses.
+```python
+import os
+import re
+
+def load_network_inventory(file_path):
+    """
+    Parses the inventory.yaml file dynamically without external dependencies.
+    Returns a dictionary mapping hostnames to IP addresses.
+    """
+    inventory = {}
+    if not os.path.exists(file_path):
+        print(f"Error: Inventory file not found at {file_path}")
+        return inventory
+
+    current_hostname = None
+    with open(file_path, "r") as file:
+        for line in file:
+            line = line.strip()
+            # Skip comments and empty lines
+            if not line or line.startswith("#"):
+                continue
+            
+            # Match hostname key
+            if line.startswith("- hostname:") or line.startswith("hostname:"):
+                current_hostname = line.split(":", 1)[1].strip()
+            # Match ip key under the current hostname
+            elif (line.startswith("ip:") or line.startswith("- ip:")) and current_hostname:
+                ip_address = line.split(":", 1)[1].strip()
+                inventory[current_hostname] = ip_address
+                current_hostname = None # Reset for next block
+                
+    return inventory
 
 def check_device_status(ip_address):
     """
-    Simulates a network reachability check using system ping.
-    Returns True if the host responds, False otherwise.
+    Executes a system ping to verify infrastructure device availability.
     """
-    # Running a single ping command (-c 1 for Linux/macOS, change to -n 1 for Windows)
-    # stdout and stderr are piped to DEVNULL to keep the terminal output clean
-    try:
-        output = subprocess.run(
-            ["ping", "-c", "1", "-W", "2", ip_address],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        return output.returncode == 0
-    except Exception:
-        return False
+    # -c 1 sends exactly 1 packet, -W 1 waits 1 second for a response
+    response = os.system(f"ping -c 1 -W 1 {ip_address} > /dev/null 2>&1")
+    return response == 0
 
-def main():
-    # A dictionary representing our critical network assets (simulating an API response or inventory)
-    network_inventory = {
-        "core-firewall-01": "192.168.1.1",
-        "distribution-switch-01": "192.168.1.2",
-        "primary-dns-server": "8.8.8.8",
-        "backup-dns-server": "8.8.4.4"
-    }
+def run_network_audit():
+    print("=========================================")
+    print("  NETDEVOPS DATA-DRIVEN HEALTH CHECK     ")
+    print("=========================================\n")
     
-    print("==================================================")
-    print("STARTING AUTOMATED NETWORK REACHABILITY VERIFICATION")
-    print("==================================================\n")
+    # Path to our external inventory file
+    inventory_path = os.path.join(os.path.dirname(__file__), "..", "data", "inventory.yaml")
+    network_inventory = load_network_inventory(inventory_path)
     
-    report = {"online": [], "offline": []}
+    if not network_inventory:
+        print("No devices found in inventory. Exiting audit.")
+        return
+        
+    active_devices = 0
+    total_devices = len(network_inventory)
     
     for hostname, ip in network_inventory.items():
         print(f"Checking {hostname} [{ip}]...")
         is_online = check_device_status(ip)
         
         if is_online:
-            print(f"   🟢 [ONLINE] {hostname} is reachable.")
-            report["online"].append(hostname)
+            print(f" -> STATUS: ONLINE MATCHED\n")
+            active_devices += 1
         else:
-            print(f"   🔴 [OFFLINE] {hostname} failed to respond!")
-            report["offline"].append(hostname)
+            print(f" -> STATUS: UNREACHABLE TIMEOUT\n")
             
-    print("\n==================================================")
-    print("AUTOMATION SUMMARY REPORT")
-    print(f"Successfully reached: {len(report['online'])} devices.")
-    print(f"Failed connections: {len(report['offline'])} devices.")
-    print("==================================================")
+    print("-----------------------------------------")
+    print(f"Audit Complete: {active_devices}/{total_devices} Devices Reachable.")
+    print("-----------------------------------------")
 
 if __name__ == "__main__":
-    main()
+    run_network_audit()
