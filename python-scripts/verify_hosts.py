@@ -1,13 +1,4 @@
 import os
-import re
-
-def load_network_inventory(file_path):
-    """
-    Parses the inventory.yaml file dynamically without external dependencies.
-    Returns a dictionary mapping hostnames to IP addresses.
-```python
-import os
-import re
 
 def load_network_inventory(file_path):
     """
@@ -23,18 +14,15 @@ def load_network_inventory(file_path):
     with open(file_path, "r") as file:
         for line in file:
             line = line.strip()
-            # Skip comments and empty lines
             if not line or line.startswith("#"):
                 continue
             
-            # Match hostname key
             if line.startswith("- hostname:") or line.startswith("hostname:"):
                 current_hostname = line.split(":", 1)[1].strip()
-            # Match ip key under the current hostname
             elif (line.startswith("ip:") or line.startswith("- ip:")) and current_hostname:
                 ip_address = line.split(":", 1)[1].strip()
                 inventory[current_hostname] = ip_address
-                current_hostname = None # Reset for next block
+                current_hostname = None
                 
     return inventory
 
@@ -42,7 +30,6 @@ def check_device_status(ip_address):
     """
     Executes a system ping to verify infrastructure device availability.
     """
-    # -c 1 sends exactly 1 packet, -W 1 waits 1 second for a response
     response = os.system(f"ping -c 1 -W 1 {ip_address} > /dev/null 2>&1")
     return response == 0
 
@@ -51,7 +38,6 @@ def run_network_audit():
     print("  NETDEVOPS DATA-DRIVEN HEALTH CHECK     ")
     print("=========================================\n")
     
-    # Path to our external inventory file
     inventory_path = os.path.join(os.path.dirname(__file__), "..", "data", "inventory.yaml")
     network_inventory = load_network_inventory(inventory_path)
     
