@@ -18,8 +18,15 @@
           - show version | include uptime
       register: network_telemetry
 
-    - name: Generate Clean Health Report Log
-      copy:
+    - name: Create reports directory on the control machine
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../documentation/reports"
+        state: directory
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate clean health report on the control machine
+      ansible.builtin.copy:
         content: |
           =========================================
           NETDEVOPS AUTOMATED NETWORK HEALTH REPORT
@@ -32,4 +39,5 @@
           
           [System Uptime]
           {{ network_telemetry.stdout[1] }}
-        dest: "./documentation/reports/health_check_{{ inventory_hostname }}.txt"
+        dest: "{{ playbook_dir }}/../documentation/reports/health_check_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
